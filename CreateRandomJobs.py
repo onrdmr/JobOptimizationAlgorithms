@@ -10,7 +10,7 @@ from matplotlib.image import imread
 
 import graphviz
 
-import queue
+from queue import Queue
 
 @dataclass
 class ResourceDict:
@@ -135,22 +135,26 @@ class JobsHelper:
 
   @classmethod
   def drawGraph(self):
-    print("not Implemented")
-
-  @classmethod
-  def drawGraph(self, jobs: list[Job]):
     g = graphviz.Digraph(engine='dot')
     g.attr('node', shape='rectangle')
     edges= []
-    for job in jobs:
-      if job.precedence == None:
-        edges.append('Start', job.name)
+
+
+    bfs = Queue()      
+    nodeName = "Start"
+    for job in self.initialJobs.jobs:
+      edges.append((nodeName , job.name))
+      bfs.put(job)
       
-      for nextJob in job.nextJobs:
-        edges.append((job.name, nextJob.name))
-  
+    while bfs.empty() != True:
+      baseJob=bfs.get()
+      
+      for job in baseJob.nextJobs:
+        edges.append((baseJob.name , job.name))
+        bfs.put(job) 
+    
     for s, t in edges:
-      g.add(s, t)
+      g.edge(s, t)
 
     g.render('pert', format='png')
 
@@ -160,6 +164,37 @@ class JobsHelper:
     ax.imshow(img)
     
     plt.show()
+
+
+
+
+
+    edges
+    print("not Implemented")
+
+  # @classmethod
+  # def drawGraph(self, jobs: list[Job]):
+  #   g = graphviz.Digraph(engine='dot')
+  #   g.attr('node', shape='rectangle')
+  #   edges= []
+  #   for job in jobs:
+  #     if job.precedence == None:
+  #       edges.append('Start', job.name)
+      
+  #     for nextJob in job.nextJobs:
+  #       edges.append((job.name, nextJob.name))
+  
+  #   for s, t in edges:
+  #     g.add(s, t)
+
+  #   g.render('pert', format='png')
+
+  #   img = imread('pert.png')
+
+  #   fig, ax = plt.subplots()
+  #   ax.imshow(img)
+    
+  #   plt.show()
 
   initialJobs: Starter
   xmlString : str
@@ -184,6 +219,11 @@ def main():
   JobsHelper.PopulateForwardGraph(jobs=jobList)
 
   JobsHelper.drawGraph()
+
+  # deneme = JobsHelper.initialJobs
+  # print("deneme", len(deneme.jobs))
+  # print(deneme.jobs[2])
+
 
 if __name__ == "__main__":
   main()
