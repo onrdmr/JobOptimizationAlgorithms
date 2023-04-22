@@ -145,14 +145,22 @@ class JobsHelper:
     for job in self.initialJobs.jobs:
       edges.append((nodeName , job.name))
       bfs.put(job)
-      
+    
+    endNodes= []
+
     while bfs.empty() != True:
-      baseJob=bfs.get()
+      baseJob : Job = bfs.get()
       
       for job in baseJob.nextJobs:
-        edges.append((baseJob.name , job.name))
-        bfs.put(job) 
-    
+        edges.append((baseJob.name, job.name))
+        bfs.put(job)
+        if(len(job.nextJobs) == 0):
+          endNodes.append(job)
+
+    for job in endNodes:
+      edges.append((job.name, "End"))
+
+
     for s, t in edges:
       g.edge(s, t)
 
