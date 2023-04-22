@@ -12,6 +12,8 @@ import graphviz
 
 from queue import Queue
 
+from collections import defaultdict
+
 @dataclass
 class ResourceDict:
 
@@ -66,7 +68,7 @@ class Job:
     allocatedResource: list[Resource]
 
     def __str__(self):
-      return f"<job> {self.name} {self.duration} <precedence> {self.precedence} </precedence> <resource> {self.allocatedResource} </resource> </job>"
+      return f"<job> {self.name} {self.duration} <precedence> {'None' if self.precedence is None else ''.join([str(i) for i in self.precedence])} </precedence> <resource> {self.allocatedResource} </resource> </job>"
 
 @dataclass
 class RandomJobCreator:
@@ -84,6 +86,7 @@ class RandomJobCreator:
     def Populate(self):
      # create jobs without precedence
      for jobIdx in range(self.jobCount):
+
       job = Job('job' + str(jobIdx), duration=int(random() * self.maxDuration), precedence=None, allocatedResource=None)
       self.jobList.append(job)
 
@@ -92,9 +95,10 @@ class RandomJobCreator:
       self.jobList[idx].precedence = None
 
      for idx in range(self.independentStartCount, self.jobCount):
-      mod = sample(range(0, idx), int(random() * self.maxPrecedenceCount))
-      
+
+      mod = sample(range(0, idx), 1 + int(random() * self.maxPrecedenceCount))
       self.jobList[idx].precedence = [self.jobList[i] for i in mod]
+      continue
 
      return self
 
@@ -126,15 +130,19 @@ class JobsHelper:
   def PopulateForwardGraph(self, jobs: list[Job]):
     self.initialJobs = Starter() 
     for nextJob in jobs:
-      if nextJob.precedence == None:
+      if nextJob.precedence == None or nextJob.precedence == []:
         self.initialJobs.jobs.append(nextJob)
         continue 
       for job in nextJob.precedence:
         job.nextJobs.append(nextJob)
+      
+      # if(len(job.nextJobs) == 1 and int(job.name[3:]) > 20 ):
+      #   print("job.nextJobs")
+
     return self.initialJobs
 
   @classmethod
-  def drawGraph(self):
+  def DrawGraph(self):
     g = graphviz.Digraph(engine='dot')
     g.attr('node', shape='rectangle')
     edges= []
@@ -145,19 +153,24 @@ class JobsHelper:
     for job in self.initialJobs.jobs:
       edges.append((nodeName , job.name))
       bfs.put(job)
-    
-    endNodes= []
+
+    endNodes= {}
+
+    visited = defaultdict(lambda : False)
 
     while bfs.empty() != True:
-      baseJob : Job = bfs.get()
-      
+      baseJob: Job = bfs.get()
+
       for job in baseJob.nextJobs:
+        if(visited[baseJob.name]):
+          continue
         edges.append((baseJob.name, job.name))
         bfs.put(job)
         if(len(job.nextJobs) == 0):
-          endNodes.append(job)
-
-    for job in endNodes:
+          endNodes[job.name] = job
+      visited[baseJob.name] = True
+      
+    for job in endNodes.values():
       edges.append((job.name, "End"))
 
 
@@ -170,18 +183,15 @@ class JobsHelper:
 
     fig, ax = plt.subplots()
     ax.imshow(img)
-    
+
     plt.show()
 
 
 
 
 
-    edges
-    print("not Implemented")
-
   # @classmethod
-  # def drawGraph(self, jobs: list[Job]):
+  # def DrawGraph(self, jobs: list[Job]):
   #   g = graphviz.Digraph(engine='dot')
   #   g.attr('node', shape='rectangle')
   #   edges= []
@@ -226,7 +236,11 @@ def main():
 
   JobsHelper.PopulateForwardGraph(jobs=jobList)
 
-  JobsHelper.drawGraph()
+
+
+  JobsHelper.DrawGraph()
+
+
 
   # deneme = JobsHelper.initialJobs
   # print("deneme", len(deneme.jobs))
