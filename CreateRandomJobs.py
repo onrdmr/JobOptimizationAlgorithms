@@ -61,11 +61,23 @@ class Job:
      self.nextJobs = []
      self.allocatedResource = allocatedResource
 
+     self.earlyStart = 0
+     self.earlyFinish = 0
+     self.lateStart = 0
+     self.lateFinish = 0
+
     name: str
     duration: int
     precedence: list[Job]
     nextJobs: list[Job]
     allocatedResource: list[Resource]
+    
+    earlyStart: int
+    earlyFinish: int
+
+    lateStart: int
+    lateFinish: int
+
 
     def __str__(self):
       return f"<job> {self.name} {self.duration} <precedence> {'None' if self.precedence is None else ''.join([str(i) for i in self.precedence])} </precedence> <resource> {self.allocatedResource} </resource> </job>"
@@ -116,16 +128,39 @@ class RandomJobCreator:
     maxResourceCount : int
     maxPrecedenceCount : int
 
+class JobLevelDecorator:
+  def __init__(self, job: Job, level: int):
+    self.job = job
+    self.level = level
+
+  job: Job
+  level: int # level in bfs
+
 class JobsHelper:
+
   @classmethod
   def ToXmlPretty(self,xmlString : str):
     xmlString = "<xml>" + xmlString + "</xml>"
     dom = xml.dom.minidom.parseString(xmlString)
 
     self.prettyXml = dom.toprettyxml(indent=' ')
-  
+
     return self.prettyXml
-  
+
+  @classmethod
+  def ForwardPass(self):
+    queue = Queue()
+    level = 0
+    for job in self.initialJobs:
+      jobl = JobLevelDecorator(job, level)
+
+      queue.put(jobl)
+
+    
+
+
+
+
   @classmethod
   def PopulateForwardGraph(self, jobs: list[Job]):
     self.initialJobs = Starter() 
@@ -178,44 +213,15 @@ class JobsHelper:
       g.edge(s, t)
 
     g.render('pert', format='png')
-
     img = imread('pert.png')
-
     fig, ax = plt.subplots()
     ax.imshow(img)
-
     plt.show()
-
-
-
-
-
-  # @classmethod
-  # def DrawGraph(self, jobs: list[Job]):
-  #   g = graphviz.Digraph(engine='dot')
-  #   g.attr('node', shape='rectangle')
-  #   edges= []
-  #   for job in jobs:
-  #     if job.precedence == None:
-  #       edges.append('Start', job.name)
-      
-  #     for nextJob in job.nextJobs:
-  #       edges.append((job.name, nextJob.name))
-  
-  #   for s, t in edges:
-  #     g.add(s, t)
-
-  #   g.render('pert', format='png')
-
-  #   img = imread('pert.png')
-
-  #   fig, ax = plt.subplots()
-  #   ax.imshow(img)
-    
-  #   plt.show()
 
   initialJobs: Starter
   xmlString : str
+
+
 
 def main():
   randomJobCreator = RandomJobCreator(jobCount=100, maxDuration=50, maxPrecedenceCount=3, maxResourceCount=4)
@@ -239,6 +245,8 @@ def main():
 
 
   JobsHelper.DrawGraph()
+
+
 
 
 
