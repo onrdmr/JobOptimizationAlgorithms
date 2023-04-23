@@ -11,7 +11,6 @@ from matplotlib.image import imread
 import graphviz
 
 from queue import Queue
-
 from collections import defaultdict
 
 @dataclass
@@ -51,15 +50,23 @@ class Resource:
    def __str__():
      return f"<name>{self.name}</name> <amount>{self.amount}</amount>"
 
+# # gereksiz 
+# class Visited:
+#   def __init__(self, visited):
+#     self.visited = visited
+#   visited: bool
+
 @dataclass
-class Job:
+class Job():
     
-    def __init__(self, name: str, duration: int, precedence: list[Job] , allocatedResource: list[Resource]):
+    def __init__(self, name: str, duration: int, precedence: list[Job] , allocatedResource: list[Resource]): #, visited = False):
+    #  super().__init__(visited=visited)
      self.name = name
      self.duration = duration
      self.precedence = precedence
      self.nextJobs = []
      self.allocatedResource = allocatedResource
+     
 
      self.earlyStart = 0
      self.earlyFinish = 0
@@ -128,7 +135,7 @@ class RandomJobCreator:
     maxResourceCount : int
     maxPrecedenceCount : int
 
-class JobLevelDecorator:
+class JobVisitedDecorator:
   def __init__(self, job: Job, level: int):
     self.job = job
     self.level = level
@@ -150,16 +157,29 @@ class JobsHelper:
   @classmethod
   def ForwardPass(self):
     queue = Queue()
-    level = 0
-    for job in self.initialJobs:
-      jobl = JobLevelDecorator(job, level)
 
-      queue.put(jobl)
+    for job in self.initialJobs.jobs:
+      queue.put(job)
 
-    
+    visited = defaultdict(lambda : False)
 
+    while queue.empty() != True:
+      job : Job = queue.get()
 
+      previousEarlyFinishMax = 0
+      if job.precedence != None:
+        for pJob in job.precedence:
+          if pJob.earlyFinish > previousEarlyFinishMax:
+            previousEarlyFinishMax = pJob.earlyFinish 
 
+      job.earlyStart = previousEarlyFinishMax
+      job.earlyFinish = job.earlyStart + job.duration
+      visited[job.name] = visited
+
+      for job in job.nextJobs:
+        queue.put(job)
+
+    del queue
 
   @classmethod
   def PopulateForwardGraph(self, jobs: list[Job]):
@@ -171,9 +191,6 @@ class JobsHelper:
       for job in nextJob.precedence:
         job.nextJobs.append(nextJob)
       
-      # if(len(job.nextJobs) == 1 and int(job.name[3:]) > 20 ):
-      #   print("job.nextJobs")
-
     return self.initialJobs
 
   @classmethod
@@ -204,13 +221,18 @@ class JobsHelper:
         if(len(job.nextJobs) == 0):
           endNodes[job.name] = job
       visited[baseJob.name] = True
-      
+
     for job in endNodes.values():
       edges.append((job.name, "End"))
-
+      
 
     for s, t in edges:
       g.edge(s, t)
+      g.node(s, label=f'''<<TABLE BORDER="O" CELLBORDER="1" CELLSPACING="0">
+                              <TR><TD>Cell 1</TD><TD ROWSPAN="2">Cell 2</TD></TR>
+                              <TR><TD>Cell 3</TD><TD>Cell 4</TD></TR>
+                            </TABLE>>''')
+
 
     g.render('pert', format='png')
     img = imread('pert.png')
@@ -242,7 +264,7 @@ def main():
 
   JobsHelper.PopulateForwardGraph(jobs=jobList)
 
-
+  JobsHelper.ForwardPass()
 
   JobsHelper.DrawGraph()
 
